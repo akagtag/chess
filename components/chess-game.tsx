@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { Chessboard } from "react-chessboard"
+import { Chessboard, type ChessboardOptions, type PieceDropHandlerArgs } from "react-chessboard"
 import { Chess } from "chess.js"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -280,7 +280,11 @@ export default function ChessGame() {
     }
   }, [timerActive, game])
 
-  const onDrop = (sourceSquare: string, targetSquare: string) => {
+  const onDrop = useCallback(({ sourceSquare, targetSquare }: PieceDropHandlerArgs) => {
+    if (!sourceSquare || !targetSquare) {
+      return false
+    }
+
     // Check if it's player's turn
     const currentTurn = game.turn() === "w" ? "white" : "black"
     if (currentTurn !== playerColor || game.isGameOver()) {
@@ -305,8 +309,18 @@ export default function ChessGame() {
     } catch (e) {
       return false
     }
-  }
+  }, [game, playerColor, updateGameState])
 
+  const chessboardOptions: ChessboardOptions = {
+    position: fen,
+    onPieceDrop: onDrop,
+    boardOrientation: playerColor,
+    allowDrawingArrows: true,
+    boardStyle: {
+      borderRadius: "0.75rem",
+      boxShadow: "0 18px 45px -24px hsl(var(--foreground) / 0.45)",
+    },
+  }
   const resetGame = () => {
     const newGame = new Chess()
     setGame(newGame)
@@ -353,15 +367,15 @@ export default function ChessGame() {
   }
 
   return (
-    <div className="flex flex-col lg:flex-row gap-6 w-full max-w-6xl">
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col sm:flex-row gap-4 justify-between">
+    <div className="grid w-full max-w-6xl min-w-0 grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(280px,360px)] lg:items-start">
+      <div className="flex min-w-0 flex-col gap-4">
+        <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:items-end sm:justify-between sm:gap-4">
           <div className="flex flex-col gap-2">
             <label htmlFor="difficulty" className="text-sm font-medium">
               Bot Difficulty
             </label>
             <Select value={difficulty} onValueChange={changeDifficulty}>
-              <SelectTrigger id="difficulty" className="w-[180px]">
+              <SelectTrigger id="difficulty" className="w-full sm:w-[180px]">
                 <SelectValue placeholder="Select difficulty" />
               </SelectTrigger>
               <SelectContent>
@@ -377,7 +391,7 @@ export default function ChessGame() {
               Play as
             </label>
             <Select value={playerColor} onValueChange={changePlayerColor}>
-              <SelectTrigger id="color" className="w-[180px]">
+              <SelectTrigger id="color" className="w-full sm:w-[180px]">
                 <SelectValue placeholder="Select color" />
               </SelectTrigger>
               <SelectContent>
@@ -387,9 +401,9 @@ export default function ChessGame() {
             </Select>
           </div>
 
-          <div className="flex gap-2">
-            <Button onClick={resetGame} className="self-end" variant="outline">
-              <RotateCcw className="mr-2 h-4 w-4" /> New Game
+          <div className="col-span-2 flex gap-2 sm:ml-auto sm:col-span-1">
+            <Button onClick={resetGame} className="min-w-0 flex-1 sm:flex-none" variant="outline">
+              <RotateCcw className="mr-2 h-4 w-4 shrink-0" /> <span className="truncate">New Game</span>
             </Button>
             <Button
               onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
@@ -402,16 +416,10 @@ export default function ChessGame() {
           </div>
         </div>
 
-        <div className="relative">
-          <div className="w-full aspect-square max-w-[600px] mx-auto">
-            <Chessboard
-              position={fen}
-              onPieceDrop={onDrop}
-              boardOrientation={playerColor === "white" ? "white" : "black"}
-              areArrowsAllowed={true}
-            />
+        <div className="relative mx-auto w-full max-w-[600px]">
+          <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-muted/30 p-1 shadow-sm sm:p-2">
+            <Chessboard options={chessboardOptions} />
           </div>
-
           {isThinking && (
             <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-black/70 text-white px-4 py-2 rounded-md">
               Bot is thinking...
@@ -420,7 +428,7 @@ export default function ChessGame() {
         </div>
 
         {gameStatus && (
-          <Alert variant={game.isGameOver() ? "default" : "outline"}>
+          <Alert variant={game.isGameOver() ? "default" : undefined}>
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>
               {game.isGameOver() ? (
@@ -436,7 +444,7 @@ export default function ChessGame() {
         )}
       </div>
 
-      <div className="flex-1 min-w-[250px]">
+      <div className="min-w-0 w-full">
         <Tabs defaultValue="moves">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="moves">Move History</TabsTrigger>
