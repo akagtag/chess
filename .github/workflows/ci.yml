@@ -32,3 +32,20 @@ jobs:
 
             - name: Build application
               run: pnpm run build
+
+            - name: Send Slack notification
+              if: always()
+              env:
+                  SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+                  JOB_STATUS: ${{ job.status }}
+              run: |
+                  if [ "$JOB_STATUS" = "success" ]; then
+                    MESSAGE="Chess CI Pipeline: SUCCESS"
+                  else
+                    MESSAGE="Chess CI Pipeline: FAILED"
+                  fi
+
+                  curl -X POST \
+                    -H "Content-type: application/json" \
+                    --data "{\"text\":\"$MESSAGE\"}" \
+                    "$SLACK_WEBHOOK_URL"
